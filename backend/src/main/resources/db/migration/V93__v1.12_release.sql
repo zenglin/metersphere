@@ -49,8 +49,6 @@ ALTER TABLE load_test
 ALTER TABLE api_test_case
     ADD follow_people VARCHAR(100) NULL;
 
-ALTER TABLE test_plan ADD report_summary TEXT NULL COMMENT '测试计划报告总结';
-
 CREATE TABLE `plugin` (
   `id` varchar(50) NOT NULL COMMENT 'ID',
   `name` varchar(300) DEFAULT NULL COMMENT 'plugin name',
