@@ -4,6 +4,7 @@ import com.github.pagehelper.util.StringUtil;
 import io.metersphere.commons.utils.LogUtil;
 import io.metersphere.plugin.core.api.UiScriptApi;
 import org.reflections8.Reflections;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
@@ -57,9 +58,12 @@ public class CommonUtil {
         if (StringUtil.isNotEmpty(fileName) && fileName.endsWith(".jar")) {
             fileName = fileName.substring(0, fileName.length() - 4);
         }
-        Resource resource = resourceLoader.getResource("classpath:/" + fileName);
+        //Resource resource = resourceLoader.getResource("classpath:/" + fileName);
+        LogUtil.info("获取到文件路径：" + fileName);
+        Resource resource = new ClassPathResource(fileName);
         Properties inPro = PropertiesLoaderUtils.loadProperties(resource);
         if (inPro != null) {
+            LogUtil.info("开始读取文件内容进行反射处理");
             Set<String> entryObj = inPro.stringPropertyNames();
             if (entryObj != null) {
                 for (String entry : entryObj) {
