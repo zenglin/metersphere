@@ -68,6 +68,7 @@ import MsApiReportViewHeader from "./ApiReportViewHeader";
 import {RequestFactory} from "../../definition/model/ApiTestModel";
 import {windowPrint, getCurrentProjectID, getUUID} from "@/common/js/utils";
 import {ELEMENTS} from "../scenario/Setting";
+import {scenario} from "@/business/components/track/plan/event-bus";
 
 export default {
   name: "SysnApiReportDetail",
@@ -291,9 +292,21 @@ export default {
         }
       }
     },
+    stopRun() {
+      if (this.websocket) {
+        this.websocket.close();
+      }
+      if (this.messageWebSocket) {
+        this.messageWebSocket.close();
+      }
+      this.clearDebug();
+      this.$success(this.$t('report.test_stop_success'));
+      this.reload();
+    },
     removeReport() {
       let url = "/api/scenario/report/remove/real/" + this.reportId;
       this.$get(url, response => {
+        scenario.$emit('hide', this.scenarioId);
         this.$success(this.$t('schedule.event_success'));
         this.websocket.close();
         this.messageWebSocket.close();
