@@ -3,7 +3,6 @@ package io.metersphere.api.service;
 import com.alibaba.fastjson.JSON;
 import io.metersphere.api.dto.definition.request.MsTestPlan;
 import io.metersphere.api.dto.scenario.request.BodyFile;
-import io.metersphere.api.jmeter.JMeterService;
 import io.metersphere.base.domain.ApiScenarioWithBLOBs;
 import io.metersphere.base.domain.JarConfig;
 import io.metersphere.base.domain.TestPlanApiScenario;
@@ -20,7 +19,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jorphan.collections.HashTree;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.io.ByteArrayOutputStream;
@@ -31,7 +29,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Service
-@Transactional(rollbackFor = Exception.class)
 public class ApiJmeterFileService {
 
     @Resource
@@ -42,8 +39,6 @@ public class ApiJmeterFileService {
     private TestPlanApiScenarioMapper testPlanApiScenarioMapper;
     @Resource
     private ApiScenarioMapper apiScenarioMapper;
-    @Resource
-    private JMeterService jMeterService;
 
     public byte[] downloadJmeterFiles(String runMode, String testId, String reportId, String testPlanScenarioId) {
         Map<String, String> planEnvMap = new HashMap<>();
@@ -67,6 +62,31 @@ public class ApiJmeterFileService {
         }
         //jMeterService.addBackendListener(reportId, hashTree);
         return zipFilesToByteArray(testId, hashTree);
+    }
+
+    public byte[] downloadJmx(String runMode, String testId, String reportId, String testPlanScenarioId) {
+        Map<String, String> planEnvMap = new HashMap<>();
+        if (StringUtils.isNotEmpty(testPlanScenarioId)) {
+            // 获取场景用例单独的执行环境
+            TestPlanApiScenario planApiScenario = testPlanApiScenarioMapper.selectByPrimaryKey(testPlanScenarioId);
+            String environment = planApiScenario.getEnvironment();
+            if (StringUtils.isNotBlank(environment)) {
+                planEnvMap = JSON.parseObject(environment, Map.class);
+            }
+        }
+        HashTree hashTree = null;
+        if (ApiRunMode.DEFINITION.name().equals(runMode) || ApiRunMode.API_PLAN.name().equals(runMode)) {
+            hashTree = testPlanApiCaseService.generateHashTree(testId);
+        } else {
+            ApiScenarioWithBLOBs item = apiScenarioMapper.selectByPrimaryKey(testId);
+            if (item == null) {
+                MSException.throwException("未找到执行场景。");
+            }
+            hashTree = apiAutomationService.generateHashTree(item, reportId, planEnvMap);
+        }
+        //jMeterService.addBackendListener(reportId, hashTree);
+        String jmx = new MsTestPlan().getJmx(hashTree);
+        return jmx.getBytes(StandardCharsets.UTF_8);
     }
 
     public byte[] downloadJmeterJar() {
@@ -139,6 +159,11 @@ public class ApiJmeterFileService {
             }
         }
         return listBytesToZip(files);
+    }
+
+    private byte[] fileToByteArray(HashTree hashTree) {
+        String jmx = new MsTestPlan().getJmx(hashTree);
+        return jmx.getBytes(StandardCharsets.UTF_8);
     }
 
     private byte[] listBytesToZip(Map<String, byte[]> mapReport) {
